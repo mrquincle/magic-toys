@@ -3,6 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #include <iostream>
+#include <signal.h>
 
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
@@ -171,12 +172,26 @@ void sleep(int ms){
 }
 
 
+void INThandler(int sig) {
+	CurlClient cc;
+	std::string str_result;
+	str_result = cc.Get("http://control-me.herokuapp.com/online/false");
+	printf("Registered myself as %s\n", str_result.c_str());
+	exit(0);
+}
+
 int main(int argc, const char* argv[]) {
+
+	signal(SIGINT, INThandler);
 
 	CurlClient cc;
 	Adapter myAdapter(0, argv[1]);
 
 	int counter = 0;
+
+	std::string str_result;
+	str_result = cc.Get("http://control-me.herokuapp.com/online/true");
+	printf("Registered myself as %s\n", str_result.c_str());
 
 	std::string prev_message;
 	bool new_message = false;
@@ -184,7 +199,7 @@ int main(int argc, const char* argv[]) {
 		int8_t rssi = 0;
 		new_message = false;
 	
-		std::string str_result = cc.Get("http://control-me.herokuapp.com/state");
+		str_result = cc.Get("http://control-me.herokuapp.com/state");
 		
 		std::istringstream ss(str_result);
 		std::string message;
@@ -218,6 +233,8 @@ int main(int argc, const char* argv[]) {
 		int result = myAdapter.read_rssi(100, rssi);
 		if (result < 0) {
 			// wait before we initialize
+			std::string str_result = cc.Get("http://control-me.herokuapp.com/online/false");
+			printf("Registered myself as online\n");
 			sleep(1000);
 			myAdapter.init();
 			sleep(1000);
