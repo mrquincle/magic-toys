@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <iostream>
 
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
@@ -10,6 +11,7 @@
 #include <time.h>
 #include <Adapter.h>
 #include <curl.h>
+#include <morse.h>
 
 Adapter::Adapter(int hci_deviceid, const char* bt_addr) {
 	this->hci_deviceid = hci_deviceid;
@@ -176,12 +178,42 @@ int main(int argc, const char* argv[]) {
 
 	int counter = 0;
 
+	std::string prev_message;
+	bool new_message = false;
 	while (true) {
 		int8_t rssi = 0;
+		new_message = false;
 	
-		std::string value = cc.Get("http://control-me.herokuapp.com/state");
-		uint8_t intensity = atoi(value.c_str());
-		//printf("Returns: %i\n", intensity);
+		std::string str_result = cc.Get("http://control-me.herokuapp.com/state");
+		
+		std::istringstream ss(str_result);
+		std::string message;
+
+		int cnt = 0;
+		uint8_t intensity;
+		while(std::getline(ss, message, ':')) {
+			std::cout << message << '\n';
+			cnt++;
+			if (cnt == 1) {
+				intensity = atoi(message.c_str());
+			} 
+			if (cnt == 2) {
+				break;
+			}
+		}
+
+		if (prev_message.compare(message) != 0) {
+			printf("New message!");
+			new_message = true;
+			prev_message = message;
+		}
+
+		printf("Go morse on %s\n", message.c_str()); 
+		//uint8_t intensity = atoi(value.c_str());
+		printf("Set intensity: %i\n", intensity);
+		std::string morse = morseCode(message);
+		printf("Morse code: %s\n", morse.c_str());
+
 
 		int result = myAdapter.read_rssi(100, rssi);
 		if (result < 0) {
@@ -190,8 +222,24 @@ int main(int argc, const char* argv[]) {
 			myAdapter.init();
 			sleep(1000);
 		} else {
+			if (new_message) {
+				printf("Send morse of length %li\n", morse.length());
+				for (int i = 0; i < morse.length(); i++) {
+					if (morse[i] == '.') {
+						myAdapter.write(10);
+					} else {
+						myAdapter.write(100);
+					}
+					sleep(200);
+					myAdapter.write(0);
+					sleep(200);
+				}
+				new_message = false;
+			}
+			printf("Send intensity now\n");
 			myAdapter.write(intensity);
 			//printf("%i\n", rssi);
+			
 		}
 
 		sleep(1000);
