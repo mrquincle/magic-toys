@@ -225,12 +225,19 @@ int main(int argc, const char* argv[]) {
 			if (new_message) {
 				printf("Send morse of length %li\n", morse.length());
 				for (int i = 0; i < morse.length(); i++) {
-					if (morse[i] == '.') {
-						myAdapter.write(10);
-					} else {
+					switch(morse[i]) {
+					case '.':
+						myAdapter.write(20);
+						sleep(200);
+						break;
+					case '-':
 						myAdapter.write(100);
+						sleep(400);
+						break;
+					case ' ':
+						sleep(400);
+						break;
 					}
-					sleep(200);
 					myAdapter.write(0);
 					sleep(200);
 				}

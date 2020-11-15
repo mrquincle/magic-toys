@@ -71,7 +71,7 @@ string morseCode(string s) {
 	// Morse code 
 	std::stringstream sout;
 	for (int i = 0; s[i]; i++) {
-		sout << morseEncode(s[i]);
+		sout << morseEncode(s[i]) << ' ';
 	}
 	return sout.str();
 } 
