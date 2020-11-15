@@ -9,6 +9,7 @@
 
 #include <time.h>
 #include <Adapter.h>
+#include <curl.h>
 
 Adapter::Adapter(int hci_deviceid, const char* bt_addr) {
 	this->hci_deviceid = hci_deviceid;
@@ -85,7 +86,6 @@ int Adapter::getHciDeviceId(){
 int Adapter::read_rssi(int to, int8_t &rssi) {
 	rssi = 0;
 	int result = hci_read_rssi(hciDevice, hciHandle, &rssi, to);
-
 	if (result < 0) {
 		printf("rssi: %i %s\n", rssi,
 				(result == -1) ? strerror(errno) : "success");
@@ -118,24 +118,8 @@ uint8_t Adapter::rssi_to_intensity(int8_t value) {
  * For fun try to write the given value directly over an HCI socket (not recommended!)
  */
 void Adapter::write(uint8_t value) {
-	float neg_intensity = value;
-	const float rssi_min = -90, rssi_max = -50;
-	const float intensity_min = 10, intensity_max = 100;
-	const float rssi_range = (rssi_max - rssi_min), intensity_range = (intensity_max - intensity_min);
-
-	// map rssi values to intensity commands
-	// map -90 to 10 (0xA), map -30 to 100
-	double scale = (rssi_range) / (intensity_range);
-	uint8_t intensity = (uint8_t)(((neg_intensity - rssi_min) / scale) + intensity_min);
-
-	// should be limited according to
-	// https://metafetish.club/t/magic-motion-toys-maybe-universal-specifications/286
-	if (intensity > 100) {
-		intensity = 100;
-	}
-
 	// this is the payload we want to sent (see below) 
-	uint8_t cmd[5] = { 0x04, 0x08, intensity, 0x64, 0x00 };
+	uint8_t cmd[5] = { 0x04, 0x08, value, 0x64, 0x00 };
 
 	// we want to send the following command:
 	// 02 01 0e 0c 00 08 00 04 00 52 03 00 04 08 20 64 00
@@ -175,7 +159,7 @@ void Adapter::write(uint8_t value) {
 
 	// finally, send the stuff!
 	if (send(l2capSock, &raw_buffer[9], 17-9, 0)) {
-		printf("%i\n", intensity);
+		printf("%i\n", value);
 	}
 }
 
@@ -187,12 +171,17 @@ void sleep(int ms){
 
 int main(int argc, const char* argv[]) {
 
+	CurlClient cc;
 	Adapter myAdapter(0, argv[1]);
 
 	int counter = 0;
 
 	while (true) {
 		int8_t rssi = 0;
+	
+		std::string value = cc.Get("http://control-me.herokuapp.com/state");
+		uint8_t intensity = atoi(value.c_str());
+		//printf("Returns: %i\n", intensity);
 
 		int result = myAdapter.read_rssi(100, rssi);
 		if (result < 0) {
@@ -201,7 +190,6 @@ int main(int argc, const char* argv[]) {
 			myAdapter.init();
 			sleep(1000);
 		} else {
-			uint8_t intensity = myAdapter.rssi_to_intensity(rssi);
 			myAdapter.write(intensity);
 			//printf("%i\n", rssi);
 		}

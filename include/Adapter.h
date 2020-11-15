@@ -21,5 +21,6 @@ class Adapter {
 
 	int getHciDeviceId();
 	int read_rssi(int to, int8_t & rssi);
-	void write(int8_t value);
+	uint8_t rssi_to_intensity(int8_t value);
+	void write(uint8_t value);
 };

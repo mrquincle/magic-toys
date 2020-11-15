@@ -5,7 +5,8 @@ set(CMAKE_CXX_STANDARD 11)
 
 set(BINARIES
     src/magic_control.cc
-    src/magic_touch.cc)
+    src/magic_touch.cc
+    src/magic_remote.cc)
 
 #set(DEPS
 #    thd/aes.c)
@@ -14,6 +15,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
 find_package(Bluez REQUIRED)
 find_package(blepp REQUIRED)
+find_package(CURL REQUIRED)
 
 include_directories(${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/include ${BLUEZ_INCLUDE_DIRS} ${BLEPP_INCLUDE_DIRS})
 
@@ -22,7 +24,7 @@ foreach (binary_src ${BINARIES})
     message(STATUS "Configure \"${binary_name}\" to be created subsequently by make")
 
     add_executable(${binary_name} ${binary_src} ${DEPS})
-    target_link_libraries(${binary_name} ${PROJECT_NAME} ${BLUEZ_LIBRARIES} ${BLEPP_LIBRARIES})
+	target_link_libraries(${binary_name} ${PROJECT_NAME} ${BLUEZ_LIBRARIES} ${BLEPP_LIBRARIES} ${CURL_LIBRARIES})
 endforeach()
 
 
